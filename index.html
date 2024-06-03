@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Waste not want not: A web-tool for allocating people to sets of appointments</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+    <script src="algos.js" defer></script>
+    <script src="results.js" defer></script>
+    <script src="utils.js" defer></script>
+    <script src="dataGeneration.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+</head>
+<body>
+    <h1>Waste not want not: A web-tool for allocating people to sets of appointments</h1>
+    <div id="explanation">
+        <button onclick="showDialog('motivationDialog')">Motivation</button>
+        <button onclick="showDialog('howToGuideDialog')">How to Guide</button>
+        <button onclick="showDialog('aboutMethodDialog')">About the Method</button>
+        
+        <dialog id="motivationDialog">
+            <h2>Motivation</h2>
+            <p>Conventional tools people use to find appointments usually base their decision on the most popularly selected timeslot. However, sometimes what you really want is a set of appointments, perhaps because you can only accommodate a specific range of people in a single session. Intuitively, you could keep appointing the remaining people to the most popular selection among that subset. In our paper we show why this intuitive strategy (that we named Maximax) can easily be improved upon (our solution: Minimax).</p>
+            <p> Using smarter strategies for appointing people to sessions where a set of sessions is wanted would likely significantly improve attendance by offering a preferred appointment to more people. Thus, algorithms like the one we present could create significant value for group-based research studies or any other type of group appointment. These algorithms are broadly applicable to any scenario where one has a sample of people who have indicated their availabilites for a pre-determined set of appointments, from which the researcher wants to find the set that will best meet their goals. </p>
+            <button onclick="closeDialog('motivationDialog')">Close</button>
+        </dialog>
+        
+        <dialog id="howToGuideDialog">
+            <h2>How to Guide</h2>
+            <p><b>Step 1A:</b> If you are just looking to see the algorithms in action, all you have to do is generate the data in the top left section. You can choose your own constraints, by setting how large the sample is, how many slots people are choosing from, and what capacities the appointments have. The seed value merely makes the exact set of data you generated reproducable; if you leave it blank a random number will be chosen for you.</p>
+            <p><b>Step 1B:</b> If you instead want to use the algorithms on your own data, you will have to make sure it has the right format, and upload it in the top right section. The data will have to be in a .csv. The first column (with a header) should indicate the participant ID (integer). The exact naming of these columns should not matter. The second column (also with a header) should indicate the selections each participant made. Selections need to be a string of comma-separated integers (indexed from 1), so for example "1,2,3", where these integers represent a specific appointment in your set of appointments. If there are duplicate ID's or problems with the formatting of the selections, the app will likely refuse you service and may tell you why at the bottom of the page. You will also have to specify what the capacity limits of your appointments are.   </p>
+            <p><b>Step 2:</b> With the data in place (and visible in the data viewer section), you should now be ready to use the buttons in the middle of the page. Here you can apply the algorithms, view the results, and download the solution each algorithm offered. In the downloaded files, a "0" in the solution column indicates that the person in question was not allocated to any appointment by the algorithm.  </p>
+            <p>Should you want to compute with another set of data, or tweak the parameters, you will have to reset the app by using the (red) Reset App button.</p>
+            <p>For more information on the algorithms and metrics, see the About the Method section.</p>
+            <p>If you run into bugs or have any questions, you can contact me at willuk [at] vivaldi [dot] net.</p>
+            <button onclick="closeDialog('howToGuideDialog')">Close</button>
+        </dialog>
+        
+        <dialog id="aboutMethodDialog">
+            <h2>About the Method</h2>
+            <p>The algorithms themselves are incredibly simple. Maximax takes the people who have not been assigned to a slot yet, measures which slot is most popular among them, checks how many people selected that popular slot, and allocates as many people as the slot capacity allows to that slot (of those who selected it). This is repeated until everyone has been assigned to a session. Minimax has the same process as Maximax, with the only difference being that it does not allocate to the most popular appointment. Instead, it allocates to the appointment that is closest in popularity to the minimum attendance requirement of timeslots. The appointment capacity constraints are only enforced after this allocation cycle has completed, meaning that before this step, appointments can be overfilled if there was no room otherwise. During constraint enforcement, people that overfill or underfill slots are unassigned until constraints are met (this is what you can download). For more details see the OSF repository linked in the paper (python). Alternatively, if you can read JavaScript, you can look at the source code of this webapp. </p>
+            <p>The metrics we focus on are also easy to understand. Both MiSR and MaSR compute how well a solution fits to the theoretically optimal solution. A score of 1 is thus considered equivalent to the optimal solution, while a score of 0 indicates failure to make sensible allocations. The two metrics differ in what they consider to be the theoretical optimal. MiSR is interested in minimizing the number of appointments while maximizing the number of attendees. This makes sense to use where for example, running appointments is expensive. MaSR is interested in maximizing the number of viable appointments and attendees. This makes sense to use whenever you want to have as many unique groups as possible, for example for statistical reasons. For details on the mathematics of these metrics, please have a look at our paper.  </p>
+            <button onclick="closeDialog('aboutMethodDialog')">Close</button>
+        </dialog>
+    </div>
+    <div class="container">
+        <div class="column">
+            <h2>Generate Data</h2>
+            <label for="rows">Number of people:</label>
+            <input type="number" id="rows" value="100"><br>
+            <label for="number">Number of Slots:</label>
+            <input type="number" id="number" value="20"><br>
+            <label for="seed">Seed (for reproducibility):</label>
+            <input type="number" id="seed" value="6159"><br>
+            <label for="minm">Minimum attendees:</label>
+            <input type="number" id="minm" value="5"><br>
+            <label for="maxm">Maximum attendees:</label>
+            <input type="number" id="maxm" value="10"><br>
+            <button id="generate-button" onclick="generateAndDisplayData()">Generate and Display Data</button>
+        </div>
+        <div class="column">
+            <h2>Upload Data</h2>
+            <input type="file" id="upload" accept=".csv"><br>
+            <label for="uploadMinm">Minimum attendees:</label>
+            <input type="number" id="uploadMinm" value="5"><br>
+            <label for="uploadMaxm">Maximum attendees:</label>
+            <input type="number" id="uploadMaxm" value="10"><br>
+            <button id="upload-button" onclick="uploadAndDisplayData()">Upload and Display Data</button>
+        </div>
+    </div>
+    <div class="scrollable-container">
+        <h2>Data Display</h2>
+        <div id="generated-uploaded-data" class="scrollable-data"></div>
+    </div>
+    <div class="button-group">
+        <button onclick="applyAlgorithms()">Apply Algorithms</button>
+        <button onclick="compareResults()">Compare Results</button>
+        <button onclick="downloadAllocations()">Download Allocations</button>
+        <button onclick="resetApp()">Reset App</button>
+    </div>
+    <div id="results">
+        <h2>Results</h2>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Minimax</th>
+                    <th>Maximax</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>F (% of sample successfully allocated)</td>
+                    <td id="minimaxFit"></td>
+                    <td id="maximaxFit"></td>
+                </tr>
+                <tr>
+                    <td>K (Number of slots used in the solution)</td>
+                    <td id="minimaxK"></td>
+                    <td id="maximaxK"></td>
+                </tr>
+                <tr>
+                    <td><strong>MiSR (Minimize K, maximize F)</strong></td>
+                    <td id="minimaxMiSR"><strong></strong></td>
+                    <td id="maximaxMiSR"><strong></strong></td>
+                </tr>
+                <tr>
+                    <td><strong>MaSR (Maximize K, maximize F)</strong></td>
+                    <td id="minimaxMaSR"><strong></strong></td>
+                    <td id="maximaxMaSR"><strong></strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="message"></div>
+</body>
+</html>
